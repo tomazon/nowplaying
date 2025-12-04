@@ -1,0 +1,97 @@
+#! /usr/bin/env python
+
+import database
+import timestamp
+
+import gzip
+import json
+import re
+import sys
+
+
+def main() -> None:
+    """Entry point"""
+
+    db = database.Database()
+
+    if len(sys.argv) < 2:
+        raise Exception(f"Usage: {sys.argv[0]}: file.psql.gz")
+    filename: str = sys.argv[1]
+    print ("FILE: ", filename)
+
+    try:
+        with gzip.open(filename, 'rt', encoding='latin1') as fh:
+            line_no: int = 0
+            state = 'out'
+            for line in fh:
+                line_no += 1
+                line = line.strip()
+                line += "\t"
+                if re.match('COPY "oplog"', line):
+                    state = 'in'
+                elif re.match('\\\\\.', line):
+                    state = 'out'
+                elif re.match('SET client_encoding', line):
+                    state = 'out'
+                    #print(line)
+                elif state == 'in':
+                    process_entry(db, line)
+                    #print(f">>> {line} <<<")
+    except FileNotFoundError:
+        print(f"Error: The file '{filename}' was not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+def process_entry(db, line: str):
+    entry: list[str] = parse_data_line(line)
+    print(entry['meta']['old_time'])
+    json_text: str = json.dumps(entry)
+    db.insert(json_text)
+
+
+def parse_data_line(line):
+    # COPY "oplog" ("id", "time_t", "time", "listeners_tot", "listeners_int",
+    # "listeners_pitt", "type", "operator", "title", "artist", "album",
+    # "label", "location", "mediaid", "track", "mic", "legalid", "psa", "kt",
+    # "promo", "weather", "note", "mediapart", "und") FROM stdin;
+
+    out = {}
+    out['meta'] = {}
+
+    fields: list[str] = [
+        "id", "time_t", "time", "listeners_tot", "listeners_int",
+        "listeners_pitt", "type", "operator", "title", "artist", "album",
+        "label", "location", "mediaid", "track", "mic", "legalid", "psa", "kt",
+        "promo", "weather", "note", "mediapart", "und"
+    ]
+
+    skip_fields = ["id", "time_t", "time"]
+
+    col = line.split("\t")
+
+    print (f"{col[1]} -- {col[2]}")
+
+    out['timestamp'] = f"{col[1]}.{col[0]:0>7}"
+    out['meta']['old_id'] = col[0]
+    out['meta']['old_time_2'] = col[1]
+    out['meta']['old_time'] = col[2]
+
+    c: int = 0
+    for key in fields:
+        if not key in skip_fields:
+            val: str = col[c]
+            val = val.rstrip()
+            val = val.lstrip()
+            if val != '\\N' and val != "":
+                out[key] = val
+        c += 1
+    return(out)
+
+
+
+
+
+
+if __name__ == "__main__":
+    main()
