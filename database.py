@@ -7,6 +7,7 @@ A simple json-object database using time-seperated journal files a backing store
 import datetime
 import fcntl
 import json
+import gzip
 import os
 import re
 import timestamp
@@ -46,11 +47,14 @@ class Database:
         out = None
         id = self.pad_timestamp(id)
         filename = self._timestamp_to_fullpath(id)
-        with open(filename, "r") as fh:
-            for line in fh:
-                entry = line.split(': ', 1)
-                if entry[0] == id:
-                    out = entry[1]
+        if re.match(r"^.+\.gz$"):
+            fh = gzip.open(filename, "rt")
+        else:
+            fh = open(filename, "rt")
+        for line in fh:
+            entry = line.split(': ', 1)
+            if entry[0] == id:
+                out = entry[1]
         return(out)
 
     def files_in_range(self, start, end):
@@ -69,10 +73,10 @@ class Database:
                     if start <= m_max and end >= m_min:
                         dates_dir = os.path.join(month_dirs, month_dir)
                         for date_file in os.listdir(dates_dir):
-                            if not re.match(r"^\d{4}:\d{2}:\d{2}-\d{10,11}-\d{10,11}\.npj$", date_file):
+                            if not re.match(r"^\d{4}:\d{2}:\d{2}-\d{10,11}-\d{10,11}\.npj(\.gz)?$", date_file):
                                 continue
                             #desc, d_min, d_max = date_file.split('-',2)
-                            desc, d_min, d_max, ext = re.split(r"[-\.]", date_file)
+                            desc, d_min, d_max, ext = re.split(r"[-\.]", date_file,3)
                             if start <= d_max and end >= d_min:
                                 out.append(os.path.join(dates_dir, date_file))
         return(out) # unsorted
@@ -81,16 +85,19 @@ class Database:
         out = {}
         files = self.files_in_range(min_stamp, max_stamp)
         for file in files:
-            with open(file, "r") as fh:
-                for line in fh:
-                    stamp, entry = line.split(': ', 1)
-                    if stamp >= min_stamp and stamp <= max_stamp:
-                        if (type == 'ANY'):
+            if re.match(r"^.*\.gz$", file):
+                fh = gzip.open(file, "rt")
+            else:
+                fh = open(file, "rt")
+            for line in fh:
+                stamp, entry = line.split(': ', 1)
+                if stamp >= min_stamp and stamp <= max_stamp:
+                    if (type == 'ANY'):
+                        out[stamp] = entry.rstrip()
+                    else:
+                        data = json.loads(entry)
+                        if data['type'] == type:
                             out[stamp] = entry.rstrip()
-                        else:
-                            data = json.loads(entry)
-                            if data['type'] == type:
-                                out[stamp] = entry.rstrip()
         return(out)
 
     def pad_timestamp(self, timestamp):
@@ -108,6 +115,8 @@ class Database:
             os.mkdir(year_path)
         if not os.path.exists(month_path):
             os.mkdir(month_path)
+        if (os.path.exists(f"{date_path}.gz")):
+            raise Exception(f"Can't add to gziped file: {date_path}.gz")
         with open(date_path, "a") as fh:
             fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
             fh.write(f"{timestamp}: {json_text}\n")
