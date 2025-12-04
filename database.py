@@ -59,19 +59,19 @@ class Database:
         for year_dir in os.listdir(top_dir):
             if not re.match(r"^\d{10,11}-\d{10,11}-\d{4}$", year_dir):
                 break
-            y_min, y_max, desc = year_dir.split('-',2)
+            desc, y_min, y_max = year_dir.split('-',2)
             if ((start <= y_max) and (end >= y_min)):
                 month_dirs = os.path.join(top_dir, year_dir)
                 for month_dir in os.listdir(month_dirs):
                     if not re.match(r"^\d{10,11}-\d{10,11}-\d{4}:\d{2}$", month_dir):
                         break
-                    m_min, m_max, desc = month_dir.split('-',2)
+                    desc, m_min, m_max = month_dir.split('-',2)
                     if start <= m_max and end >= m_min:
                         dates_dir = os.path.join(month_dirs, month_dir)
                         for date_file in os.listdir(dates_dir):
                             if not re.match(r"^\d{10,11}-\d{10,11}-\d{4}:\d{2}:\d{2}$", date_file):
                                 break
-                            d_min, d_max, desc = date_file.split('-',2)
+                            desc, d_min, d_max = date_file.split('-',2)
                             if start <= d_max and end >= d_min:
                                 out.append(os.path.join(dates_dir, date_file))
         return(out) # unsorted
@@ -121,9 +121,9 @@ class Database:
         ms, me = ts.timestamp_range_of_utc_month(dt.year, dt.month)
         ds, de = ts.timestamp_range_of_utc_date(dt.year, dt.month, dt.day)
         return([
-            f"{ys}-{ye}-{dt.year}",
-            f"{ms}-{me}-{dt.year}:{dt.month:>0{2}}",
-            f"{ds}-{de}-{dt.year}:{dt.month:>0{2}}:{dt.day:>0{2}}",
+            f"{dt.year}-{ys}-{ye}",
+            f"{dt.year}:{dt.month:>0{2}}-{ms}-{me}",
+            f"{dt.year}:{dt.month:>0{2}}:{dt.day:>0{2}}-{ds}-{de}",
         ])
 
     def _timestamp_to_fullpath(self, timestamp):
@@ -153,8 +153,8 @@ def main() -> None:
     json_text = json.dumps(entry)
     print (f"ENTRY: {json_text}")
     db.insert(json_text)
-    print (f"FETCH: 1764795886.2370830")
-    print(db.fetch_by_id('1764795886.2370830'))
+    #print (f"FETCH: 1764795886.2370830")
+    #print(db.fetch_by_id('1764795886.2370830'))
     print(f"NOW: {now}")
     print(db.files_in_range(str(float(now) - 86123), str(float(now) + 123)))
     print("---")
