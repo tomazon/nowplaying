@@ -26,14 +26,18 @@ class Timestamp:
         #self.utc_tzinfo = ZoneInfo("UTC")
         self.local_tzinfo = ZoneInfo("us/eastern")
 
+    ###
+    # get now
 
     def now_timestamp(self):
         return(str(time()))
 
+    ###
+    # transmorging
+
     def iso_to_timestamp(self, string):
         obj=parse(string, fuzzy=True)
         return(obj.strftime('%s.%f'))
-
 
     def timestamp_to_utciso(self,timestamp):
         format = "%Y-%m-%dT%H:%M:%S.%f%z"
@@ -45,7 +49,6 @@ class Timestamp:
         local_obj = utc_obj.replace(tzinfo=tz.UTC).astimezone(self.local_tzinfo)
         return(local_obj.strftime(format))
 
-
     def utcarray_to_timestamp(self, y, m, d, H, M, S):
         dt = datetime.datetime(y, m, d, H, M, S, 0, tzinfo=datetime.timezone.utc)
         return(dt.timestamp())
@@ -54,26 +57,64 @@ class Timestamp:
         dt = datetime.datetime(y, m, d, H, M, S, 0, tzinfo=self.local_tzinfo)
         return(dt.timestamp())
 
+    ###
+    # range for time periods
 
-    def timestamp_beginning_of_utc_year(self, y):
+    def timestamp_range_of_utc_year(self, y):
+        return([
+            self._timestamp_beginning_of_utc_year(y),
+            self._timestamp_end_of_utc_year(y)
+        ])
+
+    def timestamp_range_of_utc_month(self, y, m):
+        return([
+            self._timestamp_beginning_of_utc_month(y, m),
+            self._timestamp_end_of_utc_month(y, m)
+        ])
+
+    def timestamp_range_of_utc_date(self, y, m, d):
+        return([
+            self._timestamp_beginning_of_utc_date(y, m, d),
+            self._timestamp_end_of_utc_date(y, m, d)
+        ])
+
+    def timestamp_range_of_utc_hour(self, y, m, d, h):
+        return([
+            self._timestamp_beginning_of_utc_hour(y, m, d, h),
+            self._timestamp_end_of_utc_hour(y, m, d, h)
+        ])
+
+
+    ###########################################################################
+    # Private
+
+    def _days_in_month(self, y, m):
+        return calendar.monthrange(y, m)[1]
+
+    ###
+    # Beginning of time periods
+
+    def _timestamp_beginning_of_utc_year(self, y):
         return(str(int(self.utcarray_to_timestamp(y, 1, 1,  0, 0, 0))))
 
-    def timestamp_beginning_of_utc_month(self, y, m):
+    def _timestamp_beginning_of_utc_month(self, y, m):
         return(str(int(self.utcarray_to_timestamp(y, m, 1,  0, 0, 0))))
 
-    def timestamp_beginning_of_utc_date(self, y, m, d):
+    def _timestamp_beginning_of_utc_date(self, y, m, d):
         return(str(int(self.utcarray_to_timestamp(y, m, d,  0, 0, 0))))
 
-    def timestamp_beginning_of_utc_hour(self, y, m, d, h):
+    def _timestamp_beginning_of_utc_hour(self, y, m, d, h):
         return(str(int(self.utcarray_to_timestamp(y, m, d,  h, 0, 0))))
 
+    ###
+    # End of time periods
 
-    def timestamp_end_of_utc_year(self, y):
+    def _timestamp_end_of_utc_year(self, y):
         y = y + 1
         dt = int(self.utcarray_to_timestamp(y, 1, 1,  0, 0, 0))
         return (str(dt))
 
-    def timestamp_end_of_utc_month(self, y, m):
+    def _timestamp_end_of_utc_month(self, y, m):
         m = m + 1
         if (m == 13):
             y = y + 1
@@ -81,7 +122,7 @@ class Timestamp:
         dt = int(self.utcarray_to_timestamp(y, m, 1,  0, 0, 0))
         return (str(dt))
 
-    def timestamp_end_of_utc_date(self, y, m, d):
+    def _timestamp_end_of_utc_date(self, y, m, d):
         max_d = self._days_in_month(y, m)
         d = d + 1
         if (d > max_d):
@@ -93,7 +134,7 @@ class Timestamp:
         dt = int(self.utcarray_to_timestamp(y, m, d,  0, 0, 0))
         return (str(dt))
 
-    def timestamp_end_of_utc_hour(self, y, m, d, h):
+    def _timestamp_end_of_utc_hour(self, y, m, d, h):
         h = h + 1
         if (h == 24):
             h = 1
@@ -109,33 +150,9 @@ class Timestamp:
         return (str(dt))
 
 
-    def timestamp_range_of_utc_year(self, y):
-        return([
-            self.timestamp_beginning_of_utc_year(y),
-            self.timestamp_end_of_utc_year(y)
-        ])
 
-    def timestamp_range_of_utc_month(self, y, m):
-        return([
-            self.timestamp_beginning_of_utc_month(y, m),
-            self.timestamp_end_of_utc_month(y, m)
-        ])
-
-    def timestamp_range_of_utc_date(self, y, m, d):
-        return([
-            self.timestamp_beginning_of_utc_date(y, m, d),
-            self.timestamp_end_of_utc_date(y, m, d)
-        ])
-
-    def timestamp_range_of_utc_hour(self, y, m, d, h):
-        return([
-            self.timestamp_beginning_of_utc_hour(y, m, d, h),
-            self.timestamp_end_of_utc_hour(y, m, d, h)
-        ])
-
-
-    def _days_in_month(self, y, m):
-        return calendar.monthrange(y, m)[1]
+################################################################################
+################################################################################
 
 def main() -> None:
     """Entry point"""
@@ -148,9 +165,6 @@ def test_basics():
     ts = Timestamp()
 
     timestamp = ts.now_timestamp();
-    #timestring = ts.timestamp_to_timeiso(timestamp)
-    #print(f"NOW: {timestamp} -- {timestring}")
-    #print(f">>> {ts.now_timeiso()}")
 
     print (banner("BASIC TESTS"))
     print (f"+++ {time()}")
@@ -215,8 +229,6 @@ def test_ranges():
     print ("    2025-06-07 14:00")
     start, end = ts.timestamp_range_of_utc_hour(2025, 6, 7, 14)
     show_range(start, end)
-
-
 
 def banner (string):
     bar = "================================================"

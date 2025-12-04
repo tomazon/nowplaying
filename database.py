@@ -26,30 +26,13 @@ class Database:
             raise RuntimeError("NOWPLAYING_DATADIR not set in env")
         self.dbdir = os.path.join(self.datadir, "DB")
 
-
-    def append_to_db(self, timestamp, json_text):
-        year_part, month_part, date_part = self.timestamp_to_logpath_parts(timestamp)
-        year_path  = os.path.join(self.dbdir, year_part)
-        month_path = os.path.join(year_path, month_part)
-        date_path  = os.path.join(month_path, date_part)
-        if not os.path.exists(year_path):
-            os.mkdir(year_path)
-        if not os.path.exists(month_path):
-            os.mkdir(month_path)
-        with open(date_path, "a") as fh:
-            fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
-            fh.write(f"{timestamp}: {json_text}\n")
-            #time.sleep(0.1)
-            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
-            fh.close()
-
     def insert(self, json_text):
         ts = timestamp.Timestamp()
         entry = json.loads(json_text)
         stamp = self.pad_timestamp(entry['timestamp'])
         entry['timestamp'] = stamp
         entry['meta']['inserted'] = self.pad_timestamp(ts.now_timestamp())
-        self.append_to_db(stamp, json.dumps(entry))
+        self._append_to_db(stamp, json.dumps(entry))
 
     def update(self, id, json_text):
         ts = timestamp.Timestamp()
@@ -57,19 +40,18 @@ class Database:
         new_vals = json.loads(json_text)
         entry.update(new_vals)
         entry['meta']['updated'] = self.pad_timestamp(ts.now_timestamp())
-        self.append_to_db(id, json.dumps(entry))
+        self._append_to_db(id, json.dumps(entry))
 
     def fetch_by_id(self, id):
         out = None
         id = self.pad_timestamp(id)
-        filename = self.timestamp_to_fullpath(id)
+        filename = self._timestamp_to_fullpath(id)
         with open(filename, "r") as fh:
             for line in fh:
                 entry = line.split(': ', 1)
                 if entry[0] == id:
                     out = entry[1]
         return(out)
-
 
     def files_in_range(self, start, end):
         top_dir = self.dbdir
@@ -110,33 +92,42 @@ class Database:
                                 out[stamp] = entry.rstrip()
         return(out)
 
-
-
-
-
-
-
     def pad_timestamp(self, timestamp):
         st = timestamp.split('.')
         return(f"{st[0]}.{st[1]:{0}<7}")
 
+    ############################################################################
 
+    def _append_to_db(self, timestamp, json_text):
+        year_part, month_part, date_part = self._timestamp_to_logpath_parts(timestamp)
+        year_path  = os.path.join(self.dbdir, year_part)
+        month_path = os.path.join(year_path, month_part)
+        date_path  = os.path.join(month_path, date_part)
+        if not os.path.exists(year_path):
+            os.mkdir(year_path)
+        if not os.path.exists(month_path):
+            os.mkdir(month_path)
+        with open(date_path, "a") as fh:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+            fh.write(f"{timestamp}: {json_text}\n")
+            #time.sleep(0.1)
+            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+            fh.close()
 
-    def timestamp_to_logpath_parts(self, stamp):
+    def _timestamp_to_logpath_parts(self, stamp):
         ts = timestamp.Timestamp()
         dt = datetime.datetime.fromtimestamp(float(stamp), tz=datetime.timezone.utc)
         ys, ye = ts.timestamp_range_of_utc_year(dt.year)
         ms, me = ts.timestamp_range_of_utc_month(dt.year, dt.month)
         ds, de = ts.timestamp_range_of_utc_date(dt.year, dt.month, dt.day)
-        #hs, he = self.timestamp_range_of_utc_hour(dt.year, dt.month, dt.day, dt.hour)
         return([
             f"{ys}-{ye}-{dt.year}",
             f"{ms}-{me}-{dt.year}:{dt.month:>0{2}}",
             f"{ds}-{de}-{dt.year}:{dt.month:>0{2}}:{dt.day:>0{2}}",
         ])
 
-    def timestamp_to_fullpath(self, timestamp):
-        year_part, month_part, date_part = self.timestamp_to_logpath_parts(timestamp)
+    def _timestamp_to_fullpath(self, timestamp):
+        year_part, month_part, date_part = self._timestamp_to_logpath_parts(timestamp)
         year_path  = os.path.join(self.dbdir, year_part)
         month_path = os.path.join(year_path, month_part)
         date_path  = os.path.join(month_path, date_part)
@@ -164,8 +155,6 @@ def main() -> None:
     db.insert(json_text)
     print (f"FETCH: 1764795886.2370830")
     print(db.fetch_by_id('1764795886.2370830'))
-    #db.update('1764795886.2370830', '{"DJ": "Tom", "Loc": "MCR"}')
-    #print(db.fetch_by_id('1764795886.2370830'))
     print(f"NOW: {now}")
     print(db.files_in_range(str(float(now) - 86123), str(float(now) + 123)))
     print("---")
