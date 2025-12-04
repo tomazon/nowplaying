@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 """
-Tasks are the main objects we read, display, and modify
+A simple json-object database using time-seperated journal files a backing store
 """
 
 import datetime
@@ -14,7 +14,11 @@ import yaml
 
 
 class Database:
-    """Task objects and methods"""
+    """
+    A simple database using time-seperated journal files a backing store
+    We index off a a milisecond timestamp.  We loose if two entries have the same
+    timestamp.
+    """
 
     def __init__(self):
         self.datadir = os.environ.get('NOWPLAYING_DATADIR')
