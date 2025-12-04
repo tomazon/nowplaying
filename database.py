@@ -57,21 +57,22 @@ class Database:
         top_dir = self.dbdir
         out = []
         for year_dir in os.listdir(top_dir):
-            if not re.match(r"^\d{10,11}-\d{10,11}-\d{4}$", year_dir):
-                break
+            if not re.match(r"^\d{4}-\d{10,11}-\d{10,11}$", year_dir):
+                continue
             desc, y_min, y_max = year_dir.split('-',2)
             if ((start <= y_max) and (end >= y_min)):
                 month_dirs = os.path.join(top_dir, year_dir)
                 for month_dir in os.listdir(month_dirs):
-                    if not re.match(r"^\d{10,11}-\d{10,11}-\d{4}:\d{2}$", month_dir):
-                        break
+                    if not re.match(r"^\d{4}:\d{2}-\d{10,11}-\d{10,11}$", month_dir):
+                        continue
                     desc, m_min, m_max = month_dir.split('-',2)
                     if start <= m_max and end >= m_min:
                         dates_dir = os.path.join(month_dirs, month_dir)
                         for date_file in os.listdir(dates_dir):
-                            if not re.match(r"^\d{10,11}-\d{10,11}-\d{4}:\d{2}:\d{2}.npj$", date_file):
-                                break
-                            desc, d_min, d_max = date_file.split('-',2)
+                            if not re.match(r"^\d{4}:\d{2}:\d{2}-\d{10,11}-\d{10,11}\.npj$", date_file):
+                                continue
+                            #desc, d_min, d_max = date_file.split('-',2)
+                            desc, d_min, d_max, ext = re.split(r"[-\.]", date_file)
                             if start <= d_max and end >= d_min:
                                 out.append(os.path.join(dates_dir, date_file))
         return(out) # unsorted
