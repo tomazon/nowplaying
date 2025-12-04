@@ -69,7 +69,7 @@ class Database:
                     if start <= m_max and end >= m_min:
                         dates_dir = os.path.join(month_dirs, month_dir)
                         for date_file in os.listdir(dates_dir):
-                            if not re.match(r"^\d{10,11}-\d{10,11}-\d{4}:\d{2}:\d{2}$", date_file):
+                            if not re.match(r"^\d{10,11}-\d{10,11}-\d{4}:\d{2}:\d{2}.npj$", date_file):
                                 break
                             desc, d_min, d_max = date_file.split('-',2)
                             if start <= d_max and end >= d_min:
@@ -123,7 +123,7 @@ class Database:
         return([
             f"{dt.year}-{ys}-{ye}",
             f"{dt.year}:{dt.month:>0{2}}-{ms}-{me}",
-            f"{dt.year}:{dt.month:>0{2}}:{dt.day:>0{2}}-{ds}-{de}",
+            f"{dt.year}:{dt.month:>0{2}}:{dt.day:>0{2}}-{ds}-{de}.npj",
         ])
 
     def _timestamp_to_fullpath(self, timestamp):
